@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Chatbot</title>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        prompt: ["Prompt", "sans-serif"]
+                    }
+                }
+            }
+        }
+    </script>
+
+</head>
+
+<body class="font-prompt">
+
+    <!-- Chat Popup (Always visible) -->
+    <div id="chat-popup"
+        class="fixed bottom-6 right-6 w-[90vw] max-w-lg h-[75vh] bg-white rounded-xl shadow-lg flex flex-col overflow-hidden border z-50">
+
+        <!-- Header -->
+        <div class="bg-blue-600 text-white p-3 text-center font-medium">
+            <i class="fas fa-robot"></i> AI Analytic Bot
+        </div>
+
+        <!-- Chat Area -->
+        <div id="chatbox" class="flex-1 p-3 overflow-y-auto space-y-3 text-sm"></div>
+
+        <!-- Input -->
+        <div class="p-3 border-t flex items-center gap-2">
+            <input id="chatInput" type="text" placeholder="พิมพ์ข้อความ..."
+                class="flex-1 border rounded-xl px-3 py-2 outline-none text-sm"
+                onkeydown="if(event.key==='Enter') sendMessage()" />
+            <button onclick="sendMessage()"
+                class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-sm">ส่ง</button>
+        </div>
+    </div>
+
+    <script>
+        const chatbox = document.getElementById("chatbox");
+        const chatInput = document.getElementById("chatInput");
+
+        function scrollToBottom() {
+            chatbox.scrollTo({ top: chatbox.scrollHeight, behavior: "smooth" });
+        }
+
+        function appendMessage(text, sender) {
+            const wrapper = document.createElement("div");
+            wrapper.className = `flex items-end gap-2 ${sender === "user" ? "justify-end" : ""}`;
+
+            const avatar = document.createElement("div");
+            avatar.className = "w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-xs";
+            avatar.innerHTML = sender === "user" ? "👤" : '<i class="fas fa-robot"></i>';
+
+            const bubble = document.createElement("div");
+            bubble.className = `px-4 py-2 max-w-[75%] rounded-2xl text-xs whitespace-pre-wrap ${sender === "user" ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-800"
+                }`;
+            // ✅ ใช้ innerHTML สำหรับ bot
+            if (sender === "bot") {
+                bubble.innerHTML = text;
+            } else {
+                bubble.textContent = text;
+            }
+
+            if (sender === "user") {
+                wrapper.appendChild(bubble);
+                wrapper.appendChild(avatar);
+            } else {
+                wrapper.appendChild(avatar);
+                wrapper.appendChild(bubble);
+            }
+
+            chatbox.appendChild(wrapper);
+            chatbox.scrollTop = chatbox.scrollHeight;
+        }
+        function escapeHTML(str) {
+            return str.replace(/[&<>"']/g, tag => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            }[tag]));
+        }
+
+        let sessionId = localStorage.getItem("sessionId");
+        if (!sessionId) {
+            sessionId = crypto.randomUUID();
+            localStorage.setItem("sessionId", sessionId);
+        }
+
+        async function sendMessage() {
+            // const text = chatInput.value.trim();
+            const safeInput = escapeHTML(chatInput.value.trim());
+            if (!safeInput) return;
+
+            // appendMessage(text, "user");
+            appendMessage(safeInput, "user");
+            chatInput.value = "";
+            appendMessage("กำลังวิเคราะห์...", "bot");
+
+            try {
+                const res = await fetch("https://cc66-183-89-248-12.ngrok-free.app/webhook/jita-ai", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    // body: JSON.stringify({ sessionId: "user-001", message: text })
+                    // body: JSON.stringify({ sessionId: "user-001", message: safeInput })
+                    body: JSON.stringify({ sessionId, message: safeInput })
+                });
+
+                const data = await res.json();
+                chatbox.lastChild.remove(); // remove loading message
+                appendMessage(data.output || "ขออภัย ฉันไม่เข้าใจ", "bot");
+            } catch (err) {
+                chatbox.lastChild.remove();
+                appendMessage("ไม่พบข้อมูลที่เข้ากับเงื่อนไขที่กำหนด", "bot");
+            }
+        }
+
+        // ✅ ข้อความต้อนรับตอนโหลด
+        window.onload = () => {
+            const welcomeMessage = `
+            คุณสามารถสอบถามข้อมูลงบกำไรขาดทุนจาก JITA 
+จากตัวชี้วัดทางการเงิน แบ่งเป็น 7 กลุ่มหลัก ดังนี้:
+
+        1. รายได้:
+        • รายได้รวม  
+        • รายได้จากการดำเนินงาน  
+        • รายได้ต่อหุ้น
+
+        2. กำไร: 
+        • กำไรขั้นต้น  
+        • กำไรสุทธิ  
+        • กำไรต่อหุ้น  
+        • อัตรากำไรขั้นต้น  
+        • อัตรากำไรจากการดำเนินงาน  
+        • อัตรากำไรสุทธิ
+
+        3. กระแสเงินสด:
+        • กระแสเงินสดที่ได้จากการจัดหาเงิน  
+        • เงินสดจากกิจกรรมดำเนินงาน  
+        • เงินสดจากกิจกรรมลงทุน  
+        • เงินสดเปลี่ยนแปลงสุทธิ  
+        • วงจรเงินสด
+
+        4. ค่าใช้จ่ายและต้นทุน:
+        • ค่าใช้จ่ายในการขายและบริหาร  
+        • ค่าใช้จ่ายในการขายและบริหารต่อยอดขาย  
+        • ค่าใช้จ่ายในการลงทุนต่อหุ้น  
+        • ค่าเสื่อมราคาและค่าตัดจำหน่าย  
+        • อัตราภาษี
+
+        5. ฐานะการเงิน:
+        • จำนวนหุ้นสามัญที่เรียกชำระแล้ว  
+        • มูลค่าตามบัญชีต่อหุ้น  
+        • ส่วนของผู้ถือหุ้น  
+        • หนี้สินต่อส่วนของผู้ถือหุ้น  
+        • หนี้สินระยะยาว  
+        • อัตราส่วนสภาพคล่อง
+
+        6. ผลตอบแทนผู้ถือหุ้น:
+        • เงินปันผลต่อหุ้น  
+        • อัตราการจ่ายเงินปันผล  
+        • อัตราผลตอบแทนผู้ถือหุ้น
+
+        7. ประสิทธิภาพทางการเงิน:
+        • เงินทุนหมุนเวียน  
+        • อัตราผลตอบแทนจากสินทรัพย์
+
+            `;
+            appendMessage(welcomeMessage.trim(), "bot");
+        };
+    </script>
+</body>
+
+</html>
