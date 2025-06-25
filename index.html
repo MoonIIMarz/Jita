@@ -19,7 +19,7 @@
             }
         }
     </script>
-
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 
 <body class="font-prompt">
@@ -63,11 +63,11 @@
             avatar.innerHTML = sender === "user" ? "👤" : '<i class="fas fa-robot"></i>';
 
             const bubble = document.createElement("div");
-            bubble.className = `px-4 py-2 max-w-[75%] rounded-2xl text-xs whitespace-pre-wrap ${sender === "user" ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-800"
-                }`;
-            // ✅ ใช้ innerHTML สำหรับ bot
+            bubble.className = `px-4 py-2 max-w-[75%] rounded-2xl text-xs whitespace-pre-wrap ${sender === "user" ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-800"}`;
+
             if (sender === "bot") {
-                bubble.innerHTML = text;
+                // ✅ แปลง Markdown เป็น HTML
+                bubble.innerHTML = marked.parse(text);
             } else {
                 bubble.textContent = text;
             }
@@ -113,8 +113,7 @@
                 const res = await fetch("https://bfea-124-120-34-153.ngrok-free.app/webhook/jita-ai", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    // body: JSON.stringify({ sessionId: "user-001", message: text })
-                    // body: JSON.stringify({ sessionId: "user-001", message: safeInput })
+
                     body: JSON.stringify({ sessionId, message: safeInput })
                 });
 
@@ -123,7 +122,12 @@
                 appendMessage(data.output || "ขออภัย ฉันไม่เข้าใจ", "bot");
             } catch (err) {
                 chatbox.lastChild.remove();
-                appendMessage("ไม่พบข้อมูลที่เข้ากับเงื่อนไขที่กำหนด", "bot");
+                appendMessage(`ขออภัยค่ะ ระบบยังไม่เข้าใจคำถามนี้ หรือคำถามอาจอยู่นอกขอบเขตของข้อมูลที่มี
+
+คุณสามารถลองถามได้ เช่น:
+• รายได้รวมของเจ้าสัวในปี 2023 เป็นเท่าไหร่?  
+• ส.ขอนแก่น กับเจ้าสัว ใครได้กำไรสุทธิสูงกว่าปี 2024?  
+• ขอดูแนวโน้มกระแสเงินสด 5 ปีหลังสุดของส.ขอนแก่น`, "bot");
             }
         }
 
