@@ -140,7 +140,7 @@
             appendTypingDots();
 
             try {
-                const res = await fetch("https://c8a9-2001-fb1-af-77b2-9d12-f3a1-838f-f6d1.ngrok-free.app/webhook-test/jita-ai", {
+                const res = await fetch("https://c8a9-2001-fb1-af-77b2-9d12-f3a1-838f-f6d1.ngrok-free.app/webhook/jita-ai", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ sessionId, message: safeInput })
