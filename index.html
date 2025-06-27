@@ -24,10 +24,9 @@
 
 <body class="font-prompt">
 
-    <!-- Chat Popup (Always visible) -->
+    <!-- Chat Popup -->
     <div id="chat-popup"
         class="fixed bottom-6 right-6 w-[90vw] max-w-lg h-[75vh] bg-white rounded-xl shadow-lg flex flex-col overflow-hidden border z-50">
-
         <!-- Header -->
         <div class="bg-blue-600 text-white p-3 text-center font-medium">
             <i class="fas fa-robot"></i> AI Analytic Bot
@@ -63,11 +62,14 @@
             avatar.innerHTML = sender === "user" ? "👤" : '<i class="fas fa-robot"></i>';
 
             const bubble = document.createElement("div");
-            bubble.className = `px-4 py-2 max-w-[75%] rounded-2xl text-xs whitespace-pre-wrap ${sender === "user" ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-800"}`;
+            bubble.className = `px-4 py-2 max-w-[75%] rounded-2xl text-xs whitespace-pre-wrap shadow-xl ${sender === "user"
+                ? "bg-blue-600 text-white"
+                : "bg-gray-200 text-gray-800"}`;
 
             if (sender === "bot") {
-                // ✅ แปลง Markdown เป็น HTML
-                bubble.innerHTML = marked.parse(text);
+                const raw = typeof text === "string" ? text : JSON.stringify(text);
+                const fixedText = raw.replaceAll('\\n', '\n');
+                bubble.innerHTML = marked.parse(fixedText);
             } else {
                 bubble.textContent = text;
             }
@@ -81,8 +83,37 @@
             }
 
             chatbox.appendChild(wrapper);
-            chatbox.scrollTop = chatbox.scrollHeight;
+            scrollToBottom();
         }
+
+        function appendTypingDots() {
+            const wrapper = document.createElement("div");
+            wrapper.className = "flex items-end gap-2";
+
+            const avatar = document.createElement("div");
+            avatar.className = "w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-xs";
+            avatar.innerHTML = '<i class="fas fa-robot"></i>';
+
+            const bubble = document.createElement("div");
+            bubble.className = "px-4 py-2 bg-gray-200 text-gray-800 max-w-[75%] rounded-2xl shadow-xl";
+
+            const dots = document.createElement("div");
+            dots.className = "flex space-x-1";
+
+            for (let i = 0; i < 3; i++) {
+                const dot = document.createElement("div");
+                dot.className = `w-1.5 h-1.5 bg-gray-600 rounded-full animate-bounce`;
+                dot.style.animationDelay = `${i * 0.2}s`; // ไล่ทีละจุด
+                dots.appendChild(dot);
+            }
+
+            bubble.appendChild(dots);
+            wrapper.appendChild(avatar);
+            wrapper.appendChild(bubble);
+            chatbox.appendChild(wrapper);
+            scrollToBottom();
+        }
+
         function escapeHTML(str) {
             return str.replace(/[&<>"']/g, tag => ({
                 '&': '&amp;',
@@ -100,43 +131,45 @@
         }
 
         async function sendMessage() {
-            // const text = chatInput.value.trim();
             const safeInput = escapeHTML(chatInput.value.trim());
             if (!safeInput) return;
 
-            // appendMessage(text, "user");
             appendMessage(safeInput, "user");
             chatInput.value = "";
-            appendMessage("กำลังวิเคราะห์...", "bot");
+            //appendMessage("กำลังวิเคราะห์...", "bot");
+            appendTypingDots();
 
             try {
-                const res = await fetch("https://72a6-171-6-206-224.ngrok-free.app/webhook/jita-ai", {
+                const res = await fetch("https://c8a9-2001-fb1-af-77b2-9d12-f3a1-838f-f6d1.ngrok-free.app/webhook-test/jita-ai", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-
                     body: JSON.stringify({ sessionId, message: safeInput })
                 });
 
                 const data = await res.json();
-                chatbox.lastChild.remove(); // remove loading message
+                chatbox.lastChild.remove(); // remove "กำลังวิเคราะห์..."
                 appendMessage(data.output || "ขออภัย ฉันไม่เข้าใจ", "bot");
+
             } catch (err) {
                 chatbox.lastChild.remove();
-                appendMessage(`ขออภัยค่ะ ระบบยังไม่เข้าใจคำถามนี้ หรือคำถามอาจอยู่นอกขอบเขตของข้อมูลที่มี
-
-คุณสามารถลองถามได้ เช่น:
-• รายได้รวมของเจ้าสัวในปี 2023 เป็นเท่าไหร่?  
-• ส.ขอนแก่น กับเจ้าสัว ใครได้กำไรสุทธิสูงกว่าปี 2024?  
-• ขอดูแนวโน้มกระแสเงินสด 5 ปีหลังสุดของส.ขอนแก่น`, "bot");
+                appendMessage(
+                    `ขออภัยค่ะ ระบบยังไม่เข้าใจคำถามนี้ หรือคำถามอาจอยู่นอกขอบเขตของข้อมูลที่มี\n\nคุณสามารถลองถามได้ เช่น:\n• รายได้รวมของเจ้าสัวในปี 2023 เป็นเท่าไหร่?\n• ส.ขอนแก่น กับเจ้าสัว ใครได้กำไรสุทธิสูงกว่าปี 2024?\n• ขอดูแนวโน้มกระแสเงินสด 5 ปีหลังสุดของ ส.ขอนแก่น`,
+                    "bot"
+                );
             }
         }
 
-        // ✅ ข้อความต้อนรับตอนโหลด
         window.onload = () => {
             const welcomeMessage = `
-            สวัสดีค่ะ ยินดีต้อนรับสู่ระบบวิเคราะห์ข้อมูลทางการเงินของบริษัท ส.ขอนแก่น กับบริษัทที่จดทะเบียนในตลาดหลักทรัพย์แห่งประเทศไทย
+สวัสดีค่ะ ยินดีต้อนรับสู่ระบบวิเคราะห์ข้อมูลทางการเงินของบริษัท ส.ขอนแก่น
+และบริษัทที่จดทะเบียนในตลาดหลักทรัพย์แห่งประเทศไทย ✨
 
-            `;
+คุณสามารถถามฉันเกี่ยวกับ:
+• รายได้ กำไร แนวโน้มทางการเงิน
+• เปรียบเทียบบริษัท
+• วิเคราะห์ผลประกอบการในช่วงเวลา
+
+ลองพิมพ์คำถามมาเลยค่ะ 😊`;
             appendMessage(welcomeMessage.trim(), "bot");
         };
     </script>
