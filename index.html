@@ -64,6 +64,45 @@
             chatbox.scrollTo({ top: chatbox.scrollHeight, behavior: "smooth" });
         }
 
+        // function appendMessage(text, sender) {
+        //     const wrapper = document.createElement("div");
+        //     wrapper.className = `flex items-end gap-2 ${sender === "user" ? "justify-end" : ""}`;
+
+        //     const avatar = document.createElement("div");
+        //     avatar.className = "w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-xs";
+        //     avatar.innerHTML = sender === "user" ? "👤" : '<i class="fas fa-robot"></i>';
+
+        //     const bubble = document.createElement("div");
+        //     bubble.className = `
+        //         px-4 py-2 max-w-[75%] rounded-2xl whitespace-pre-wrap shadow-xl
+        //         text-sm sm:text-base md:text-[14px]
+        //         ${sender === "user" ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-800"}
+        //         `;
+
+        //     if (sender === "bot") {
+        //         const raw = typeof text === "string" ? text : JSON.stringify(text);
+        //         const fixedText = raw.replaceAll('\\n', '\n');
+        //         // ✅ เช็คว่าเป็น <table> HTML โดยตรงหรือไม่
+        //         if (fixedText.trim().startsWith("<table")) {
+        //             bubble.innerHTML = fixedText; // ไม่ใช้ marked สำหรับ table
+        //         } else {
+        //             bubble.innerHTML = marked.parse(fixedText); // รองรับ markdown ปกติ
+        //         }
+        //     } else {
+        //         bubble.textContent = text;
+        //     }
+
+        //     if (sender === "user") {
+        //         wrapper.appendChild(bubble);
+        //         wrapper.appendChild(avatar);
+        //     } else {
+        //         wrapper.appendChild(avatar);
+        //         wrapper.appendChild(bubble);
+        //     }
+
+        //     chatbox.appendChild(wrapper);
+        //     scrollToBottom();
+        // }
         function appendMessage(text, sender) {
             const wrapper = document.createElement("div");
             wrapper.className = `flex items-end gap-2 ${sender === "user" ? "justify-end" : ""}`;
@@ -74,34 +113,53 @@
 
             const bubble = document.createElement("div");
             bubble.className = `
-                px-4 py-2 max-w-[75%] rounded-2xl whitespace-pre-wrap shadow-xl
-                text-sm sm:text-base md:text-[14px]
-                ${sender === "user" ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-800"}
-                `;
+        px-4 py-2 max-w-[75%] rounded-2xl whitespace-pre-wrap shadow-xl
+        text-sm sm:text-base md:text-[14px]
+        ${sender === "user" ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-800"}
+    `;
 
-            if (sender === "bot") {
-                const raw = typeof text === "string" ? text : JSON.stringify(text);
-                const fixedText = raw.replaceAll('\\n', '\n');
-                // ✅ เช็คว่าเป็น <table> HTML โดยตรงหรือไม่
-                if (fixedText.trim().startsWith("<table")) {
-                    bubble.innerHTML = fixedText; // ไม่ใช้ marked สำหรับ table
-                } else {
-                    bubble.innerHTML = marked.parse(fixedText); // รองรับ markdown ปกติ
-                }
-            } else {
-                bubble.textContent = text;
-            }
+            const content = document.createElement("span");
+            bubble.appendChild(content);
 
             if (sender === "user") {
+                content.textContent = text;
                 wrapper.appendChild(bubble);
                 wrapper.appendChild(avatar);
+                chatbox.appendChild(wrapper);
+                scrollToBottom();
             } else {
                 wrapper.appendChild(avatar);
                 wrapper.appendChild(bubble);
-            }
+                chatbox.appendChild(wrapper);
+                scrollToBottom();
 
-            chatbox.appendChild(wrapper);
-            scrollToBottom();
+                // ✅ Typing effect
+                const raw = typeof text === "string" ? text : JSON.stringify(text);
+                const fixedText = raw.replaceAll('\\n', '\n');
+                const html = fixedText.trim().startsWith("<table")
+                    ? fixedText
+                    : marked.parse(fixedText);
+
+                const tempDiv = document.createElement("div");
+                tempDiv.innerHTML = html;
+                const plainText = tempDiv.textContent || tempDiv.innerText || "";
+
+                let index = 0;
+                const interval = setInterval(() => {
+                    if (index < plainText.length) {
+                        content.textContent += plainText[index++];
+                        scrollToBottom();
+                    } else {
+                        clearInterval(interval);
+                        // ✅ หลังพิมพ์ครบ ให้แสดง HTML markdown จริง
+                        if (!fixedText.trim().startsWith("<table")) {
+                            bubble.innerHTML = marked.parse(fixedText);
+                        } else {
+                            bubble.innerHTML = fixedText;
+                        }
+                    }
+                }, 10); // ปรับความเร็วได้ (10 = เร็ว, 30 = ช้า)
+            }
         }
 
         function appendTypingDots() {
